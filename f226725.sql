@@ -33,7 +33,7 @@ prompt APPLICATION 226725 - Social Media 2
 -- Application Export:
 --   Application:     226725
 --   Name:            Social Media 2
---   Date and Time:   17:04 Sunday January 19, 2025
+--   Date and Time:   17:44 Monday January 20, 2025
 --   Exported By:     AKHONAKHAYA@GMAIL.COM
 --   Flashback:       0
 --   Export Type:     Application Export
@@ -42,7 +42,7 @@ prompt APPLICATION 226725 - Social Media 2
 --       Processes:                6
 --       Regions:                  3
 --       Buttons:                  3
---       Dynamic Actions:          3
+--       Dynamic Actions:          4
 --     Shared Components:
 --       Logic:
 --         Build Options:          1
@@ -105,7 +105,7 @@ wwv_imp_workspace.create_flow(
 ,p_substitution_value_01=>'Social Media 2'
 ,p_file_prefix => nvl(wwv_flow_application_install.get_static_app_file_prefix,'')
 ,p_files_version=>6
-,p_version_scn=>15599847102229
+,p_version_scn=>15600354198815
 ,p_print_server_type=>'INSTANCE'
 ,p_file_storage=>'DB'
 ,p_is_pwa=>'Y'
@@ -8173,6 +8173,19 @@ wwv_flow_imp_page.create_page(
 '       apex.event.trigger(document, ''action-delete'');',
 '    }',
 '}]);'))
+,p_inline_css=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'.user-has-liked {',
+'color: rgba(158, 98, 226, 0.786);',
+'}',
+'',
+'@media (max-width: 640px) {',
+'    .new-post-button {',
+'        position: fixed;',
+'        bottom: 24px;',
+'        right: 24px;',
+'        z-index: 1000;',
+'    }',
+'}'))
 ,p_page_template_options=>'#DEFAULT#'
 ,p_overwrite_navigation_list=>'Y'
 ,p_protection_level=>'C'
@@ -8363,8 +8376,11 @@ wwv_flow_imp_page.create_page_item(
 ,p_source_type=>'REGION_SOURCE_COLUMN'
 ,p_display_as=>'NATIVE_IMAGE_UPLOAD'
 ,p_cSize=>30
-,p_field_template=>1609121967514267634
-,p_item_template_options=>'#DEFAULT#'
+,p_tag_css_classes=>'file-upload'
+,p_tag_attributes=>'fa-camera-retro'
+,p_grid_label_column_span=>0
+,p_field_template=>2040785906935475274
+,p_item_template_options=>'#DEFAULT#:t-Form-fieldContainer--stretchInputs'
 ,p_is_persistent=>'N'
 ,p_attributes=>wwv_flow_t_plugin_attributes(wwv_flow_t_varchar2(
   'allow_cropping', 'Y',
@@ -8478,6 +8494,8 @@ wwv_flow_imp_page.create_page_da_action(
 ,p_execute_on_page_init=>'N'
 ,p_name=>'LIKE - update UI(Udjust count + heart color)'
 ,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_affected_elements_type=>'ITEM'
+,p_affected_elements=>'P1_ACTION_ID,P1_LAT,P1_LON'
 ,p_attribute_01=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'const button = $(''[data-id="''+ apex.items.P1_ACTION_ID.value +''"] .js-heart-button''); // get the card',
 '',
@@ -8497,6 +8515,75 @@ wwv_flow_imp_page.create_page_da_action(
 '    }',
 '',
 '    icon.toggleClass(''user-has-liked''); // either add this class or remove it'))
+);
+wwv_flow_imp_page.create_page_da_action(
+ p_id=>wwv_flow_imp.id(1257295775729443347)
+,p_event_id=>wwv_flow_imp.id(1257295052928443340)
+,p_event_result=>'TRUE'
+,p_action_sequence=>20
+,p_execute_on_page_init=>'N'
+,p_name=>'LIKE - do database work '
+,p_action=>'NATIVE_EXECUTE_PLSQL_CODE'
+,p_attribute_01=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'begin',
+'    -- try to store this posts'' reaction from this user',
+'    insert into AM_REACTIONS (post_id, reaction, lat, lon)',
+'        values (:P1_ACTION_ID, ''LIKED'', :P1_LAT, :P1_LON);',
+'    exception when dup_val_on_index then',
+'        -- remove it as it already existed',
+'        delete from AM_REACTIONS where',
+'            post_id=:P1_ACTION_ID and created_by=:APP_USER;',
+'    end;'))
+,p_attribute_02=>'P1_ACTION_ID,P1_LAT,P1_LON'
+,p_attribute_05=>'PLSQL'
+,p_wait_for_result=>'Y'
+);
+wwv_flow_imp_page.create_page_da_event(
+ p_id=>wwv_flow_imp.id(1257295349696443343)
+,p_name=>'action-delete'
+,p_event_sequence=>40
+,p_triggering_element_type=>'JAVASCRIPT_EXPRESSION'
+,p_triggering_element=>'document'
+,p_bind_type=>'bind'
+,p_execution_type=>'IMMEDIATE'
+,p_bind_event_type=>'custom'
+,p_bind_event_type_custom=>'action-delete'
+);
+wwv_flow_imp_page.create_page_da_action(
+ p_id=>wwv_flow_imp.id(1257295485412443344)
+,p_event_id=>wwv_flow_imp.id(1257295349696443343)
+,p_event_result=>'TRUE'
+,p_action_sequence=>10
+,p_execute_on_page_init=>'N'
+,p_name=>unistr(' DELETE \2013 Confirm dialog')
+,p_action=>'NATIVE_CONFIRM'
+,p_attribute_01=>'You are about to delete this post?'
+,p_attribute_02=>'Are you sure'
+);
+wwv_flow_imp_page.create_page_da_action(
+ p_id=>wwv_flow_imp.id(1257295555549443345)
+,p_event_id=>wwv_flow_imp.id(1257295349696443343)
+,p_event_result=>'TRUE'
+,p_action_sequence=>20
+,p_execute_on_page_init=>'N'
+,p_name=>'DELETE - do database work '
+,p_action=>'NATIVE_EXECUTE_PLSQL_CODE'
+,p_attribute_01=>wwv_flow_string.join(wwv_flow_t_varchar2(
+'delete from AM_REACTIONS where POST_ID = :P1_ACTION_ID and created_by=:APP_USER;',
+'delete from AM_POSTS where id=:P1_ACTION_ID and created_by=:APP_USER; '))
+,p_attribute_02=>'P1_ACTION_ID'
+,p_attribute_05=>'PLSQL'
+,p_wait_for_result=>'Y'
+);
+wwv_flow_imp_page.create_page_da_action(
+ p_id=>wwv_flow_imp.id(1257295691958443346)
+,p_event_id=>wwv_flow_imp.id(1257295349696443343)
+,p_event_result=>'TRUE'
+,p_action_sequence=>30
+,p_execute_on_page_init=>'N'
+,p_name=>'DELETE - remove post in UI'
+,p_action=>'NATIVE_JAVASCRIPT_CODE'
+,p_attribute_01=>'$(''[data-id=''+apex.items.P1_ACTION_ID.value+'']'').remove();'
 );
 wwv_flow_imp_page.create_page_process(
  p_id=>wwv_flow_imp.id(1257294260832443332)
